@@ -1,0 +1,24 @@
+# Core ML & data
+scikit-learn>=1.5
+pandas>=2.2
+numpy>=1.26
+scipy>=1.13
+
+# Plotting
+matplotlib>=3.9
+seaborn>=0.13
+
+# Dimensionality reduction (notebook 02) — UMAP + PyTorch autoencoder
+umap-learn>=0.5
+torch>=2.2
+
+# Topic modeling (notebook 04)
+nltk>=3.9
+gensim>=4.3.3          # 4.3.3+ dropped the scipy.linalg.triu import removed in scipy>=1.13
+pyLDAvis>=3.4
+bertopic>=0.16
+sentence-transformers>=3.0
+
+# Notebook execution
+jupyter>=1.1
+nbconvert>=7.16

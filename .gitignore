@@ -1,0 +1,44 @@
+# Data & downloaded datasets
+data/
+*.gz
+*.tar
+*.zip
+*.csv
+
+# Model artifacts (keep any web-app exports in web/public, not here)
+*.pkl
+*.joblib
+*.pt
+*.pth
+checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# NLTK / gensim / bertopic caches
+nltk_data/
+.cache/
+
+# Generated notebook viz exports (regenerated on run)
+lda_visualization.html
+bertopic_topic_map.html
+bertopic_barchart.html
+
+# Node / Next.js (web demo)
+web/node_modules/
+web/.next/
+web/out/
+web/.vercel/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Planning & audit files (local only, not part of the published repo)
+PLAN.md
+AUDIT.md
