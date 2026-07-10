@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  web:
+    name: Web app — test & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests (Vitest)
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+  notebooks:
+    name: Notebooks — validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install nbformat
+        run: pip install nbformat
+
+      - name: Validate all notebooks are well-formed
+        run: |
+          python - <<'PY'
+          import glob, sys, nbformat
+          ok = True
+          for nb in sorted(glob.glob("*.ipynb")):
+              try:
+                  nbformat.validate(nbformat.read(nb, as_version=4))
+                  print(f"OK   {nb}")
+              except Exception as e:
+                  ok = False
+                  print(f"FAIL {nb}: {e}")
+          sys.exit(0 if ok else 1)
+          PY
