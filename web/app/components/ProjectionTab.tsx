@@ -27,15 +27,27 @@ export default function ProjectionTab() {
     ctx.clearRect(0, 0, SIZE, SIZE);
     const coords = data.methods[method];
     const hi = hover?.i ?? null;
+    ctx.globalAlpha = 0.85;
     for (let i = 0; i < coords.length; i++) {
+      if (i === hi) continue; // draw the hovered point last, on top, undimmed
       const cx = PAD + coords[i][0] * (SIZE - 2 * PAD);
       const cy = PAD + (1 - coords[i][1]) * (SIZE - 2 * PAD);
       ctx.beginPath();
-      ctx.arc(cx, cy, hi === i ? 9 : 4.2, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 4.2, 0, Math.PI * 2);
       ctx.fillStyle = DIGIT_COLORS[data.labels[i]];
-      ctx.globalAlpha = hi === null || hi === i ? 0.85 : 0.5;
       ctx.fill();
-      if (hi === i) { ctx.lineWidth = 2.5; ctx.strokeStyle = "#fff"; ctx.stroke(); }
+    }
+    if (hi !== null) {
+      const cx = PAD + coords[hi][0] * (SIZE - 2 * PAD);
+      const cy = PAD + (1 - coords[hi][1]) * (SIZE - 2 * PAD);
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+      ctx.fillStyle = DIGIT_COLORS[data.labels[hi]];
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "#fff";
+      ctx.stroke();
     }
     ctx.globalAlpha = 1;
   }, [data, method, hover]);
