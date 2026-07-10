@@ -13,7 +13,7 @@ export default function RulesTab() {
     fetch("/rules.json").then((r) => r.json()).then(setData);
   }, []);
 
-  const maxLift = useMemo(() => (data ? Math.ceil(Math.max(...data.rules.map((r) => r.lift))) : 30), [data]);
+  const maxLift = useMemo(() => (data ? Math.ceil(Math.max(...data.rules.map((r) => r.lift))) : 25), [data]);
   const shown = useMemo(
     () => (data ? data.rules.filter((r) => r.lift >= minLift).sort((a, b) => b.lift - a.lift) : []),
     [data, minLift]
@@ -28,13 +28,13 @@ export default function RulesTab() {
           <label><span className="lname">Minimum lift</span><b>{minLift.toFixed(1)}×</b></label>
           <input type="range" min={1} max={maxLift} step={0.5} value={minLift} onChange={(e) => setMinLift(+e.target.value)} />
         </div>
-        <div className="tile" style={{ flex: "0 0 auto" }}>
-          <div className="v">{shown.length}</div><div className="k">rules shown</div>
+        <div className="tile" style={{ flex: "0 0 auto", minWidth: 120 }}>
+          <div className="v">{shown.length}</div><div className="k">of {data.rules.length} rules</div>
         </div>
       </div>
 
       <div className="results">
-        <div className="chart-box table-scroll">
+        <div className="chart-box table-scroll" style={{ maxHeight: 560, overflowY: "auto" }}>
           <table className="rules-table">
             <thead>
               <tr>
@@ -47,7 +47,7 @@ export default function RulesTab() {
               </tr>
             </thead>
             <tbody>
-              {shown.slice(0, 30).map((r, i) => (
+              {shown.map((r, i) => (
                 <tr key={i}>
                   <td className="item">{r.antecedents.join(", ")}</td>
                   <td className="arrow">→</td>
@@ -57,17 +57,23 @@ export default function RulesTab() {
                   <td><span className="lift-pill">{r.lift.toFixed(1)}×</span></td>
                 </tr>
               ))}
+              {shown.length === 0 && (
+                <tr><td colSpan={6} className="note" style={{ padding: "1.5rem", textAlign: "center" }}>
+                  No rules this strong — lower the minimum lift.
+                </td></tr>
+              )}
             </tbody>
           </table>
         </div>
 
         <div className="callout note">
           <strong>How to read a rule.</strong> Each row says <em>customers who bought the left-hand items also
-          bought the right-hand ones</em>. <strong>Support</strong> is how common the whole combo is;{" "}
+          bought the right-hand one</em>. <strong>Support</strong> is how common the whole combo is;{" "}
           <strong>confidence</strong> is how reliable the rule is; <strong>lift</strong> is the one that matters —
-          how many times more likely the pairing is than pure chance. Drag the <strong>minimum lift</strong> up:
-          the survivors are strong "complete the set" associations (matching party-ware, colored variants of the
-          same item) — exactly the pairings a store would bundle or cross-sell. These are real rules mined from{" "}
+          how many times more likely the pairing is than pure chance. Drag <strong>minimum lift</strong> up and
+          watch the list shrink: at low lift you get common-but-obvious pairings, and the survivors at high lift
+          are the strong "complete the set" associations (matching party-ware, colored variants of the same item)
+          — exactly the pairings a store would bundle or cross-sell. These are real rules mined from{" "}
           {data.country} orders in the Online Retail dataset (Notebook 05).
         </div>
       </div>

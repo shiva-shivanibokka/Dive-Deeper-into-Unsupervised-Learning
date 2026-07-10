@@ -103,7 +103,18 @@ basket = (df[df['Country'] == country]
           .groupby(['InvoiceNo', 'Description'])['Quantity'].sum().unstack().fillna(0) > 0)
 freq = apriori(basket, min_support=0.03, use_colnames=True)
 rules = association_rules(freq, metric='lift', min_threshold=1.0)
-rules = rules.sort_values('lift', ascending=False).head(60)
+
+# Keep readable rules only (<=2 items on the left, exactly 1 on the right)
+rules = rules[(rules['antecedents'].apply(len) <= 2) & (rules['consequents'].apply(len) == 1)].copy()
+
+# Stratified sample across lift bins so the lift filter is actually meaningful
+# (otherwise the top-N-by-lift are all clustered at high lift and the slider does nothing).
+bin_edges = [1, 2, 3, 5, 8, 12, 18, 1e9]
+picked = []
+for lo, hi in zip(bin_edges[:-1], bin_edges[1:]):
+    grp = rules[(rules['lift'] >= lo) & (rules['lift'] < hi)].sort_values('lift', ascending=False)
+    picked.append(grp.head(14))
+sample = pd.concat(picked).sort_values('lift', ascending=False).reset_index(drop=True)
 
 rules_out = [{
     'antecedents': sorted(list(r.antecedents)),
@@ -111,10 +122,11 @@ rules_out = [{
     'support': round(float(r.support), 4),
     'confidence': round(float(r.confidence), 4),
     'lift': round(float(r.lift), 2),
-} for r in rules.itertuples()]
+} for r in sample.itertuples()]
 
 json.dump({'country': country, 'rules': rules_out,
-           'note': f'Top {len(rules_out)} association rules from {basket.shape[0]} {country} invoices.'},
+           'note': f'{len(rules_out)} association rules from {basket.shape[0]} {country} invoices, '
+                   f'spanning lift {rules_out[-1]["lift"]}x to {rules_out[0]["lift"]}x.'},
           open(f'{OUT}/rules.json', 'w'))
 print(f"  wrote rules.json ({len(rules_out)} rules)")
 

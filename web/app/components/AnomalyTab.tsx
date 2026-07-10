@@ -11,7 +11,7 @@ function mulberry32(seed: number) {
   };
 }
 type Pt = [number, number];
-const SIZE = 520;
+const SIZE = 760;
 
 // two dense "normal" blobs + a scatter of genuine outliers
 function makeData(): { pts: Pt[]; truthOutlier: boolean[] } {
@@ -41,6 +41,7 @@ function knnScores(pts: Pt[], k: number): number[] {
 
 export default function AnomalyTab() {
   const [contam, setContam] = useState(0.08);
+  const [hover, setHover] = useState<{ x: number; y: number; i: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const { pts, truthOutlier } = useMemo(() => makeData(), []);
@@ -63,20 +64,36 @@ export default function AnomalyTab() {
     return { tp, fp, fn, precision, recall };
   }, [flagged, truthOutlier, pts.length]);
 
+  const maxScore = useMemo(() => Math.max(...scores), [scores]);
+
   useEffect(() => {
     const ctx = canvasRef.current!.getContext("2d")!;
     ctx.clearRect(0, 0, SIZE, SIZE);
     for (let i = 0; i < pts.length; i++) {
       const [x, y] = pts[i];
       ctx.beginPath();
-      ctx.arc(x * SIZE, (1 - y) * SIZE, flagged[i] ? 6 : 4, 0, Math.PI * 2);
+      ctx.arc(x * SIZE, (1 - y) * SIZE, hover?.i === i ? 9 : flagged[i] ? 7 : 5, 0, Math.PI * 2);
       ctx.fillStyle = flagged[i] ? "#fb7185" : "#38bdf8";
       ctx.globalAlpha = flagged[i] ? 1 : 0.7;
       ctx.fill();
-      if (flagged[i]) { ctx.lineWidth = 1.5; ctx.strokeStyle = "#fff"; ctx.stroke(); }
+      if (flagged[i] || hover?.i === i) { ctx.lineWidth = 1.5; ctx.strokeStyle = "#fff"; ctx.stroke(); }
     }
     ctx.globalAlpha = 1;
-  }, [pts, flagged]);
+  }, [pts, flagged, hover]);
+
+  function onMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * SIZE;
+    const my = ((e.clientY - rect.top) / rect.height) * SIZE;
+    let best = -1, bd = 26 * 26;
+    for (let i = 0; i < pts.length; i++) {
+      const cx = pts[i][0] * SIZE, cy = (1 - pts[i][1]) * SIZE;
+      const d = (cx - mx) ** 2 + (cy - my) ** 2;
+      if (d < bd) { bd = d; best = i; }
+    }
+    if (best >= 0) setHover({ x: e.clientX - rect.left, y: e.clientY - rect.top, i: best });
+    else setHover(null);
+  }
 
   return (
     <div className="demo">
@@ -87,28 +104,34 @@ export default function AnomalyTab() {
         </div>
       </div>
 
-      <div className="results" style={{ justifyItems: "center" }}>
-        <div style={{ maxWidth: SIZE, width: "100%" }}>
-          <canvas ref={canvasRef} width={SIZE} height={SIZE} />
+      <div className="results">
+        <div className="canvas-wrap">
+          <canvas ref={canvasRef} width={SIZE} height={SIZE} onMouseMove={onMove} onMouseLeave={() => setHover(null)} />
+          {hover && (
+            <div className="hovertip" style={{ left: hover.x, top: hover.y }}>
+              {flagged[hover.i] ? "flagged" : "normal"} · isolation {(scores[hover.i] / maxScore).toFixed(2)}
+            </div>
+          )}
           <p className="note" style={{ textAlign: "center", marginTop: ".5rem" }}>
             <span style={{ color: "#38bdf8" }}>● normal</span> &nbsp;
             <span style={{ color: "#fb7185" }}>● flagged anomaly</span>
           </p>
         </div>
 
-        <div className="tiles" style={{ maxWidth: 500, width: "100%" }}>
+        <div className="tiles">
           <div className="tile"><div className="v">{stats.tp + stats.fp}</div><div className="k">points flagged</div></div>
           <div className="tile"><div className="v">{(stats.precision * 100).toFixed(0)}%</div><div className="k">precision</div></div>
           <div className="tile"><div className="v">{(stats.recall * 100).toFixed(0)}%</div><div className="k">recall</div></div>
         </div>
 
-        <div className="callout note" style={{ maxWidth: 720 }}>
+        <div className="callout note">
           <strong>How it works.</strong> Every point is scored by how far it sits from its 5 nearest neighbors —
           isolated points score high. The <strong>contamination</strong> dial sets what fraction you assume are
           anomalies, which fixes the cutoff. Turn it too low and you miss real outliers (recall drops); turn it
           too high and you start flagging edge-of-cluster normal points (precision drops). There are 22 genuine
           outliers hidden among 260 normal points — find the dial setting that catches them without too many
-          false alarms. This is the trade-off at the heart of Notebook 03.
+          false alarms. <strong>Hover a point</strong> to see its isolation score. This is the trade-off at the
+          heart of Notebook 03.
         </div>
       </div>
     </div>

@@ -108,7 +108,7 @@ function dbscan(pts: Pt[], eps: number, minPts: number): number[] {
 }
 
 const COLORS = ["#22d3ee", "#f472b6", "#a3e635", "#fbbf24", "#a78bfa", "#fb7185", "#34d399", "#60a5fa"];
-const SIZE = 520;
+const SIZE = 760;
 
 export default function ClusteringTab() {
   const [kind, setKind] = useState("moons");
@@ -116,6 +116,7 @@ export default function ClusteringTab() {
   const [k, setK] = useState(2);
   const [eps, setEps] = useState(0.05);
   const [minPts, setMinPts] = useState(5);
+  const [hover, setHover] = useState<{ x: number; y: number; label: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const pts = useMemo(() => makeData(kind), [kind]);
@@ -124,8 +125,13 @@ export default function ClusteringTab() {
     [pts, algo, k, eps, minPts]
   );
 
+  const sizes = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const l of labels) m.set(l, (m.get(l) ?? 0) + 1);
+    return m;
+  }, [labels]);
   const nClusters = useMemo(() => new Set(labels.filter((l) => l >= 0)).size, [labels]);
-  const nNoise = useMemo(() => labels.filter((l) => l === -1).length, [labels]);
+  const nNoise = sizes.get(-1) ?? 0;
 
   useEffect(() => {
     const ctx = canvasRef.current!.getContext("2d")!;
@@ -133,7 +139,7 @@ export default function ClusteringTab() {
     for (let i = 0; i < pts.length; i++) {
       const [x, y] = pts[i];
       ctx.beginPath();
-      ctx.arc(x * SIZE, (1 - y) * SIZE, 5, 0, Math.PI * 2);
+      ctx.arc(x * SIZE, (1 - y) * SIZE, 6, 0, Math.PI * 2);
       ctx.fillStyle = labels[i] === -1 ? "#4b5578" : COLORS[labels[i] % COLORS.length];
       ctx.fill();
       ctx.lineWidth = 1;
@@ -141,6 +147,23 @@ export default function ClusteringTab() {
       ctx.stroke();
     }
   }, [pts, labels]);
+
+  function onMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * SIZE;
+    const my = ((e.clientY - rect.top) / rect.height) * SIZE;
+    let best = -1, bd = 26 * 26;
+    for (let i = 0; i < pts.length; i++) {
+      const cx = pts[i][0] * SIZE, cy = (1 - pts[i][1]) * SIZE;
+      const d = (cx - mx) ** 2 + (cy - my) ** 2;
+      if (d < bd) { bd = d; best = i; }
+    }
+    if (best >= 0) setHover({ x: e.clientX - rect.left, y: e.clientY - rect.top, label: labels[best] });
+    else setHover(null);
+  }
+
+  const tipText = (l: number) =>
+    l === -1 ? "Noise · not dense enough for any cluster" : `Cluster ${l} · ${sizes.get(l)} points`;
 
   return (
     <div className="demo">
@@ -179,21 +202,27 @@ export default function ClusteringTab() {
         )}
       </div>
 
-      <div className="results" style={{ justifyItems: "center" }}>
-        <div style={{ maxWidth: SIZE, width: "100%" }}>
-          <canvas ref={canvasRef} width={SIZE} height={SIZE} />
+      <div className="results">
+        <div className="canvas-wrap">
+          <canvas ref={canvasRef} width={SIZE} height={SIZE} onMouseMove={onMove} onMouseLeave={() => setHover(null)} />
+          {hover && (
+            <div className="hovertip" style={{ left: hover.x, top: hover.y }}>{tipText(hover.label)}</div>
+          )}
         </div>
-        <div className="tiles" style={{ maxWidth: 420, width: "100%" }}>
+
+        <div className="tiles">
           <div className="tile"><div className="v">{nClusters}</div><div className="k">clusters found</div></div>
           {algo === "dbscan" && <div className="tile"><div className="v">{nNoise}</div><div className="k">noise points</div></div>}
+          <div className="tile"><div className="v">{pts.length}</div><div className="k">total points</div></div>
         </div>
-        <div className="callout note" style={{ maxWidth: 720 }}>
+
+        <div className="callout note">
           <strong>What to try.</strong> On <em>blobs</em>, both algorithms nail it. Switch to <em>moons</em> or{" "}
           <em>circles</em> and set K-Means to the right K — it still fails, slicing the shapes straight through,
           because it assumes round clusters. Now switch to <strong>DBSCAN</strong>: with a good{" "}
           <strong>eps</strong> it traces the crescents and rings perfectly and marks stray points as noise
-          (grey). Too-small eps makes everything noise; too-large merges everything into one blob. This is the
-          picture behind Notebook 01.
+          (grey). Too-small eps makes everything noise; too-large merges everything into one blob.{" "}
+          <strong>Hover any point</strong> to see which cluster it landed in. This is the picture behind Notebook 01.
         </div>
       </div>
     </div>
