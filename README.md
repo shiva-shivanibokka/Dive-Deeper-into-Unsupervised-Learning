@@ -3,6 +3,7 @@
 > A hands-on tour of every major family of **label-free machine learning** — five from-first-principles
 > notebooks on real datasets, plus a live browser playground.
 
+[![CI](https://github.com/shiva-shivanibokka/Dive-Deeper-into-Unsupervised-Learning/actions/workflows/ci.yml/badge.svg)](https://github.com/shiva-shivanibokka/Dive-Deeper-into-Unsupervised-Learning/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://dive-deeper-unsupervised-learning.vercel.app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
@@ -229,8 +230,12 @@ cd web && npm test        # 3 Vitest tests: kmeans / dbscan / knnScores
 ```
 
 These assert the core behaviors (K-Means splits two blobs consistently, DBSCAN labels far-off points as noise,
-kNN scoring ranks a planted outlier highest). There is **no CI pipeline yet** — tests are run manually
-(see Roadmap).
+kNN scoring ranks a planted outlier highest).
+
+**Continuous integration:** a [GitHub Actions workflow](.github/workflows/ci.yml) runs on every push/PR to
+`main` — it installs the web app, runs the Vitest suite, does a production build, and validates that all five
+notebooks are well-formed (`nbformat`). Full notebook *execution* is deliberately kept out of CI: it needs
+PyTorch/UMAP/BERTopic and ~300 MB of dataset downloads, which is too slow and flaky for a fast, reliable check.
 
 ---
 
@@ -266,8 +271,9 @@ Web app: 5 interactive tabs, **~106 kB first-load JS**, 0 console errors, 3/3 un
 
 ## Roadmap / Known Limitations
 
-- **No CI pipeline yet** — tests and notebook execution are run manually; a GitHub Actions workflow to run
-  `npm test` and smoke-execute the notebooks on push would be the next hardening step.
+- **CI validates but doesn't execute notebooks** — the GitHub Actions pipeline runs the web tests/build and
+  checks notebook well-formedness, but full notebook execution (too heavy for CI) still happens locally; a
+  scheduled/self-hosted job that actually runs them would be the next hardening step.
 - **The web app is a curated subset** — it deliberately shows the headline model per family, not every
   algorithm in the notebooks (e.g. GMM, the autoencoder, and BERTopic's topic map live only in the notebooks).
 - **The anomaly demo uses a kNN-distance illustration**, not the notebook's full detector suite (Isolation
