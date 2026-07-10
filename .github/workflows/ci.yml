@@ -44,17 +44,35 @@ jobs:
       - name: Install nbformat
         run: pip install nbformat
 
-      - name: Validate all notebooks are well-formed
+      - name: Validate notebooks (structure, outputs, markdown cells)
         run: |
           python - <<'PY'
           import glob, sys, nbformat
           ok = True
           for nb in sorted(glob.glob("*.ipynb")):
+              problems = []
+              # 1. structural well-formedness against the nbformat schema
               try:
-                  nbformat.validate(nbformat.read(nb, as_version=4))
-                  print(f"OK   {nb}")
+                  doc = nbformat.read(nb, as_version=4)
+                  nbformat.validate(doc)
               except Exception as e:
+                  problems.append(f"invalid nbformat: {e}")
+                  doc = None
+              if doc is not None:
+                  for i, c in enumerate(doc.cells):
+                      # 2. no cell may carry an error-type output (a cell that raised on run)
+                      for o in c.get("outputs", []):
+                          if o.get("output_type") == "error":
+                              problems.append(f"cell {i}: error output ({o.get('ename')})")
+                      # 3. markdown/raw cells must not carry code-only keys (outputs/execution_count)
+                      if c.cell_type != "code" and ("outputs" in c or "execution_count" in c):
+                          problems.append(f"cell {i}: {c.cell_type} cell has code-only keys")
+              if problems:
                   ok = False
-                  print(f"FAIL {nb}: {e}")
+                  print(f"FAIL {nb}")
+                  for p in problems:
+                      print(f"       - {p}")
+              else:
+                  print(f"OK   {nb}")
           sys.exit(0 if ok else 1)
           PY
