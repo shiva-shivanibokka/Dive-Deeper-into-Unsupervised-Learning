@@ -1,22 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useJson } from "../lib/useJson";
 
 type Word = [string, number];
 type TopicsData = { categories: string[]; models: Record<string, Word[][]>; note: string };
 
 export default function TopicsTab() {
-  const [data, setData] = useState<TopicsData | null>(null);
+  const { data, error } = useJson<TopicsData>("/topics.json");
   const [model, setModel] = useState("");
   const [topic, setTopic] = useState(0);
 
   useEffect(() => {
-    fetch("/topics.json").then((r) => r.json()).then((d: TopicsData) => {
-      setData(d);
-      setModel(Object.keys(d.models)[0]);
-    });
-  }, []);
+    if (data && !model) setModel(Object.keys(data.models)[0]);
+  }, [data, model]);
 
+  if (error) return <p className="note">Couldn&apos;t load the topics data — try refreshing the page.</p>;
   if (!data || !model) return <p className="note">loading topics…</p>;
   const topics = data.models[model];
   const words = topics[topic];

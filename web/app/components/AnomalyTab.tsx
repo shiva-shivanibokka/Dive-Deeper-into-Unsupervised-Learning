@@ -1,16 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { mulberry32, knnScores, type Pt } from "../lib/cluster";
 
-function mulberry32(seed: number) {
-  return function () {
-    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-type Pt = [number, number];
 const SIZE = 760;
 
 // two dense "normal" blobs + a scatter of genuine outliers
@@ -27,16 +19,6 @@ function makeData(): { pts: Pt[]; truthOutlier: boolean[] } {
   }
   for (let i = 0; i < 22; i++) { pts.push([0.06 + rnd() * 0.88, 0.06 + rnd() * 0.88]); truth.push(true); }
   return { pts, truthOutlier: truth };
-}
-
-const dist2 = (a: Pt, b: Pt) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
-
-// anomaly score = mean distance to k nearest neighbors (higher = more isolated)
-function knnScores(pts: Pt[], k: number): number[] {
-  return pts.map((p, i) => {
-    const ds = pts.map((q, j) => (i === j ? Infinity : Math.sqrt(dist2(p, q)))).sort((a, b) => a - b);
-    return ds.slice(0, k).reduce((a, b) => a + b, 0) / k;
-  });
 }
 
 export default function AnomalyTab() {

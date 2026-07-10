@@ -1,17 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useJson } from "../lib/useJson";
 
 type Rule = { antecedents: string[]; consequents: string[]; support: number; confidence: number; lift: number };
 type RulesData = { country: string; rules: Rule[]; note: string };
 
 export default function RulesTab() {
-  const [data, setData] = useState<RulesData | null>(null);
+  const { data, error } = useJson<RulesData>("/rules.json");
   const [minLift, setMinLift] = useState(1);
-
-  useEffect(() => {
-    fetch("/rules.json").then((r) => r.json()).then(setData);
-  }, []);
 
   const maxLift = useMemo(() => (data ? Math.ceil(Math.max(...data.rules.map((r) => r.lift))) : 25), [data]);
   const shown = useMemo(
@@ -19,6 +16,7 @@ export default function RulesTab() {
     [data, minLift]
   );
 
+  if (error) return <p className="note">Couldn&apos;t load the rules data — try refreshing the page.</p>;
   if (!data) return <p className="note">loading rules…</p>;
 
   return (

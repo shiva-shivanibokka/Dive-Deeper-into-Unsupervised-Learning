@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useJson } from "../lib/useJson";
 
 type ProjData = { labels: number[]; methods: Record<string, [number, number][]>; note: string };
 
@@ -12,14 +13,10 @@ const SIZE = 760;
 const PAD = 28;
 
 export default function ProjectionTab() {
-  const [data, setData] = useState<ProjData | null>(null);
+  const { data, error } = useJson<ProjData>("/projection.json");
   const [method, setMethod] = useState("t-SNE");
   const [hover, setHover] = useState<{ x: number; y: number; i: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    fetch("/projection.json").then((r) => r.json()).then(setData);
-  }, []);
 
   useEffect(() => {
     if (!data) return;
@@ -69,6 +66,7 @@ export default function ProjectionTab() {
     else setHover(null);
   }
 
+  if (error) return <p className="note">Couldn&apos;t load the projection data — try refreshing the page.</p>;
   if (!data) return <p className="note">loading projection…</p>;
 
   return (

@@ -1,9 +1,14 @@
 # Generate the precomputed JSON the web tabs load: MNIST projections, topics, association rules.
+# Runnable from anywhere — all paths are resolved relative to this file, not the current directory.
 import json, os, warnings, numpy as np
+from pathlib import Path
 warnings.filterwarnings('ignore')
 
-OUT = 'web/public'
+ROOT = Path(__file__).resolve().parents[1]   # web/export_data.py -> repo root
+OUT = str(ROOT / 'web' / 'public')
+DATA = ROOT / 'data'
 os.makedirs(OUT, exist_ok=True)
+os.makedirs(DATA, exist_ok=True)
 RS = 42
 
 # ---------------------------------------------------------------- 1) PROJECTION (MNIST)
@@ -91,7 +96,14 @@ print("Building rules.json (Apriori association rules)...")
 import pandas as pd
 from mlxtend.frequent_patterns import apriori, association_rules
 
-df = pd.read_excel('data/online_retail.xlsx')
+retail_path = DATA / 'online_retail.xlsx'
+if not retail_path.exists():
+    print("  downloading Online Retail from UCI (~23 MB, one-time)...")
+    import urllib.request
+    urllib.request.urlretrieve(
+        'https://archive.ics.uci.edu/ml/machine-learning-databases/00352/Online%20Retail.xlsx',
+        retail_path)
+df = pd.read_excel(retail_path)
 df['InvoiceNo'] = df['InvoiceNo'].astype(str)
 df = df[~df['InvoiceNo'].str.startswith('C')]
 df = df.dropna(subset=['Description'])
